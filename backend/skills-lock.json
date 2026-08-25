@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "docker-expert": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "computedHash": "2c1a7f95b15db6c92d2cb27c3d59d584eb596593eab193f23765465b9d212f14"
+    }
+  }
+}
