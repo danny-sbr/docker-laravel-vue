@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 80,
+  "plugins": [
+    "prettier-plugin-tailwindcss",
+    "@ianvs/prettier-plugin-sort-imports"
+  ],
+  "importOrder": [
+    "^vue$",
+    "^vue-router$",
+    "^pinia$",
+    "^@vue/(.*)$",
+    "",
+    "^primevue(.*)$",
+    "^@primevue/(.*)$",
+    "",
+    "<BUILTIN_MODULES>",
+    "",
+    "<THIRD_PARTY_MODULES>",
+    "",
+    "^@/stores/(.*)$",
+    "^@/router/(.*)$",
+    "^@/components/(.*)$",
+    "^@/composables/(.*)$",
+    "^@/utils/(.*)$",
+    "^@/helper/(.*)$",
+    "^@/styles/(.*)$",
+    "^@/types/(.*)$",
+    "^@/assets/(.*)$",
+    "",
+    "^[.]+\/components\/(.*)$",
+    "^[.]+\/composables\/(.*)$",
+    "^[.]+\/utils\/(.*)$",
+    "^[.]+\/types\/(.*)$",
+    "^[.]+\/(.*)$",
+    "",
+    "^.+\\.(css|scss|less|styl)$"
+  ],
+  "importOrderCaseSensitive": true
+}

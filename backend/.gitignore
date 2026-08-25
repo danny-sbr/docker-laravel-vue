@@ -1,0 +1,53 @@
+# Laravel
+/vendor
+/node_modules
+/public/hot
+/public/storage
+/public/mix-manifest.json
+/storage/*.key
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+
+# 環境設定
+.env
+.env.backup
+.env.production
+
+# 快取與編譯
+/bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+!storage/framework/cache/data/.gitkeep
+!storage/framework/sessions/.gitkeep
+!storage/framework/views/.gitkeep
+
+# Laravel Mix 編譯產物
+/public/css
+/public/js
+/public/mix-manifest.json
+
+# 測試
+.phpunit.result.cache
+/coverage
+
+# IDE / 編輯器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+.agents/
+skills-lock.json
+
+# Docker
+mysql_data/

@@ -1,0 +1,180 @@
+# ============================================================
+# Docker Compose 設定檔（正式環境基底）
+# ============================================================
+# 此檔案定義所有服務的「正式環境」設定。
+# 開發環境的覆寫設定請見 docker-compose.override.yml。
+# Compose 啟動時會自動合併兩份檔案：
+#   docker-compose.yml + docker-compose.override.yml
+# 若只想跑正式環境設定，可用：
+#   docker compose -f docker-compose.yml up -d
+# ============================================================
+
+# Compose 檔案格式版本，3.8 支援 deploy.resources 等進階功能
+version: "3.8"
+
+# 專案名稱 — 決定容器、網路、Volume 的前綴名稱
+# 例如容器會命名為 docker-laravel-vue-app-1
+name: docker-laravel-vue
+
+# ============================================================
+# 服務定義
+# ============================================================
+services:
+    # ----------------------------------------------------------
+    # app 服務 — PHP 7.4 + Apache（Laravel 應用程式）
+    # ----------------------------------------------------------
+    app:
+        build:
+            # Build Context：以目前目錄為根目錄，送進 Docker Engine 進行建置
+            context: .
+            # 指定使用哪個 Dockerfile
+            dockerfile: Dockerfile
+            # 指定 Multi-stage Build 的目標階段
+            # 正式環境用 production（程式碼直接 COPY 進 Image）
+            # 開發環境會在 override 中覆寫為 development
+            target: production
+
+        container_name: laravel-app
+
+        # 主機 Port 8087 → 容器 Port 80（Apache 預設）
+        # 瀏覽器開啟 http://localhost:8087 即可存取
+        ports:
+            - "8087:80"
+
+        # 從 .env 檔案載入環境變數
+        # Laravel 的 DB_HOST、DB_DATABASE、APP_KEY 等都在這裡
+        env_file:
+            - .env
+
+        # 加入 frontend + backend 兩個網路
+        # app 是唯一同時連接兩個網路的服務，扮演「橋梁」角色
+        # 外部流量 → frontend → app → backend → db
+        networks:
+            - frontend
+            - backend
+
+        # 啟動順序控制：等 db 的 healthcheck 通過後才啟動 app
+        # 確保 MySQL「真正可用」，而不只是「容器已啟動」
+        depends_on:
+            db:
+                condition: service_healthy
+
+        # 重啟策略：除非手動停止，否則自動重啟（含 Docker daemon 重啟後）
+        restart: unless-stopped
+
+        # 收到停止信號後，給予 30 秒的優雅關閉時間
+        # 超過 30 秒仍未結束才會被強制終止（SIGKILL）
+        stop_grace_period: 30s
+
+        # 資源限制
+        deploy:
+            resources:
+                limits:
+                    # 限制記憶體上限 512MB，防止單一容器吃光主機資源
+                    memory: 512M
+
+        # 容器 Log 設定
+        logging:
+            # 使用 json-file 驅動（Docker 預設）
+            driver: json-file
+            options:
+                # 單一 log 檔案上限 10MB
+                max-size: "10m"
+                # 最多保留 3 個檔案（自動輪替）
+                # 所以 app 容器最多佔用 30MB 的 log 空間
+                max-file: "3"
+
+    # ----------------------------------------------------------
+    # db 服務 — MySQL 8.0 資料庫
+    # ----------------------------------------------------------
+    db:
+        # 直接使用 Docker Hub 上的官方 MySQL 8.0 映像檔
+        # 不需要自訂 Dockerfile
+        image: mysql:8.0
+
+        container_name: laravel-db
+
+        volumes:
+            # Named Volume：MySQL 資料持久化
+            # 容器刪除後資料仍保留（除非 docker compose down -v）
+            - mysql_data:/var/lib/mysql
+            # Bind Mount：自訂 MySQL 設定檔（唯讀掛載）
+            # 設定字元集 utf8mb4 等參數
+            - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+
+        # 從 .env 載入環境變數（與 app 共用同一個 .env）
+        env_file:
+            - .env
+
+        # 資料庫初始化設定
+        # 使用 ${VAR:-default} 語法：若 .env 中未定義，就用預設值
+        environment:
+            # 自動建立的資料庫名稱
+            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+            # 自動建立的使用者（非 root）
+            MYSQL_USER: ${DB_USERNAME:-laravel}
+            # 該使用者的密碼
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            # root 密碼
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+
+        # db 加入 backend 網路（供 app 容器內部連線）
+        # 開發環境同時加入 frontend 網路，讓主機可透過 port 映射連線（TablePlus 等工具）
+        networks:
+            - backend
+            - frontend
+
+        # 健康檢查：用 mysqladmin ping 確認 MySQL 是否可連線
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+            # 每 10 秒檢查一次
+            interval: 10s
+            # 單次檢查超過 5 秒視為失敗
+            timeout: 5s
+            # 連續失敗 5 次才判定為 unhealthy
+            retries: 5
+            # 容器啟動後等 30 秒才開始檢查（給 MySQL 初始化時間）
+            start_period: 30s
+
+        restart: unless-stopped
+
+        deploy:
+            resources:
+                limits:
+                    # 資料庫給較多記憶體（1GB）
+                    memory: 1G
+
+        # Log 設定（與 app 相同策略）
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+# ============================================================
+# 網路定義
+# ============================================================
+networks:
+    # 前端網路：連接外部流量與 app 容器
+    # bridge 是 Docker 預設的網路驅動，容器間可互通
+    frontend:
+        driver: bridge
+
+    # 後端網路：app ↔ db 之間的內部通訊
+    # internal: true 表示此網路「不連接外部」
+    # → db 無法存取網際網路，也無法被外部直接連線
+    # → 提升安全性：即使 db port 暴露，外部也連不進來
+    backend:
+        driver: bridge
+        internal: true
+
+# ============================================================
+# Volume 定義
+# ============================================================
+volumes:
+    # MySQL 資料持久化 Volume
+    # Docker 自動管理儲存位置（通常在 /var/lib/docker/volumes/）
+    # 生命週期獨立於容器：
+    #   docker compose down    → Volume 保留
+    #   docker compose down -v → Volume 刪除（資料全清！）
+    mysql_data:

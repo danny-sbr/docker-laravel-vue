@@ -1,0 +1,12 @@
+.git
+node_modules
+vendor
+.env
+!.env.example
+*.md
+Dockerfile
+docker-compose*.yml
+.claude
+.agents
+.idea
+.vscode

@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / 編輯器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 環境變數（根目錄若有共用 .env）
+.env
+.env.local
+.env.*.local
+
+# Log
+*.log
+
+# Claude Code（根目錄設定；backend/frontend 各自已有獨立設定）
+.claude/settings.local.json
